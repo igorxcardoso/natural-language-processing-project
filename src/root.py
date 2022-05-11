@@ -6,6 +6,10 @@ import nltk
 import tensorflow as tf
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
+from tensorflow.keras import Model, Input
+from tensorflow.keras.layers import LSTM, Embedding, Dense, TimeDistributed, SpatialDropout1D, Bidirectional
+from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
+
 
 np.random.seed(0)
 plt.style.use("ggplot")
@@ -76,7 +80,7 @@ plt.savefig("grafico_tag.png",dpi=300)
 max_len = 100
 # O max_len é igual 100 devido as características dos dados
 
-# Geração dos pad_sequences e Teste de validação
+# Geração dos pad_sequences e Teste de validação (representção do texto)
 X = [[word2idx[w] for w in ato] for ato in atos]
 X = pad_sequences(maxlen=max_len, sequences=X, padding="post", value=word2idx['ENDPAD'])
 
@@ -97,18 +101,22 @@ x_test, x_val, y_test, y_val = train_test_split(x_test, y_test, test_size=0.5, r
 
 
 
+''' Rede Neural: Bi-LSTM '''
+
+input_word = Input(shape=(max_len,))
+model = Embedding(input_dim=num_words+1, output_dim=100, input_length=max_len)(input_word)
+model = SpatialDropout1D(0.1)(model)
+model = Bidirectional(LSTM(units=100, return_sequences=True, recurrent_dropout=0.1))(model)
+out = TimeDistributed(Dense(num_tags, activation="softmax"))(model)
+model = Model(input_word, out)
+
+model.summary()
+
+
+# Compilando o modelo de acorco com otimizador, ma função de perda e uma métrica
+#  Com a accuracy é possível identificar a qualidade do modelo, poies esse métria é acertiva com as tags vazias
+model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=["accuracy"])
 
 
 
-
-
-
-
-
-
-
-
-
-
-''' Normalizar capitalização '''
-
+''' Com o modelo pronto, agora é parte de treinamento '''
